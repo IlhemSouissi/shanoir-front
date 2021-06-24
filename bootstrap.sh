@@ -125,42 +125,7 @@ if [ -n "$deploy" ] ; then
 	# Deploy stage
 	#
 
-	# 1. databases
-	step "init: database keycloak-database"
-	docker-compose up -d database keycloak-database
-	wait_tcp_ready database          3306
-	wait_tcp_ready keycloak-database 3306
-
-	# 2. keycloak
-	step "init: keycloak"
-	docker-compose run --rm -e SHANOIR_MIGRATION=init keycloak
-
-	step "start: keycloak"
-	docker-compose up -d keycloak
-	utils/oneshot	'\| *JBoss Bootstrap Environment'				\
-			' INFO  \[org.jboss.as\] .* Keycloak .* started in [0-9]*ms'	\
-			-- docker-compose logs --no-color --follow keycloak >/dev/null
-
-	# 3. infrastructure services
-	step "start: infrastructure services"
-	for infra_ms in rabbitmq ldap dcm4chee-database dcm4chee-arc preclinical-bruker2dicom solr
-	do
-		step "start: $infra_ms infrastructure microservice"
-		docker-compose up -d "$infra_ms"
-	done
-	
-	# 4. Shanoir-NG microservices
-	step "start: sh-ng microservices"
-	for ms in users studies datasets import preclinical 
-	do
-		step "init: $ms microservice"
-		docker-compose run --rm -e SHANOIR_MIGRATION=init "$ms"
-		step "start: $ms microservice"
-		docker-compose up -d "$ms"
-	done
-
 	# 5. nginx
 	step "start: nginx"
 	docker-compose up -d nginx
 fi
-
